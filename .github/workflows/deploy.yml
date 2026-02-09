@@ -24,9 +24,7 @@ jobs:
     - name: Prepare SSH key (from base64 secret)
       run: |
         echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > "$GITHUB_WORKSPACE/deploy_key"
-        chmod 600 "$GITHUB_WORKSPACE/deploy_key"
-        ls -l "$GITHUB_WORKSPACE/deploy_key"
-        head -n 1 "$GITHUB_WORKSPACE/deploy_key"
+        chmod 644 "$GITHUB_WORKSPACE/deploy_key"
 
     - name: Copy jar to EC2 (/opt/myapp)
       uses: appleboy/scp-action@v0.1.7
@@ -53,3 +51,7 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl restart myapp
           sudo systemctl status myapp --no-pager
+
+    - name: Cleanup key
+      if: always()
+      run: rm -f "$GITHUB_WORKSPACE/deploy_key"
