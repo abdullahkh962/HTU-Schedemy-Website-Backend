@@ -21,14 +21,13 @@ jobs:
     - name: Build (Maven)
       run: mvn -B -DskipTests package
 
-    # NEW: Decode base64 secret into a real private key file
-    - name: Prepare SSH key
+    - name: Prepare SSH key (from base64 secret)
       run: |
         echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/deploy_key
         chmod 600 /tmp/deploy_key
 
-    - name: Copy jar to EC2(/opt/myapp)
-      uses: appleboy/scp-action@v1
+    - name: Copy jar to EC2 (/opt/myapp)
+      uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
@@ -37,7 +36,7 @@ jobs:
         target: "/opt/myapp"
 
     - name: Activate jar as app.jar + restart service
-      uses: appleboy/ssh-action@v1
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
@@ -45,6 +44,8 @@ jobs:
         script: |
           set -euo pipefail
           cd /opt/myapp
+
+          echo "Files in /opt/myapp:"
           ls -lah
 
           JAR="$(ls -t *.jar | head -n 1)"
