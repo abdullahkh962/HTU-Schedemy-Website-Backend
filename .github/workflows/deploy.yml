@@ -44,10 +44,17 @@ jobs:
         script: |
           set -euo pipefail
           cd /opt/myapp
+
+          echo "Listing /opt/myapp:"
           ls -lah
-          JAR="$(ls -t *.jar | head -n 1)"
+
+          echo "Listing /opt/myapp/target:"
+          ls -lah target
+
+          JAR="$(ls -t target/*.jar | head -n 1)"
           echo "Using $JAR"
           cp "$JAR" app.jar
+
           sudo systemctl daemon-reload
           sudo systemctl restart myapp
           sudo systemctl status myapp --no-pager
