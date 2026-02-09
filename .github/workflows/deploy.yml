@@ -1,14 +1,64 @@
-script: |
-  set -euo pipefail
-  cd /opt/myapp
+name: Deploy Spring Boot To EC2 (SSH)
 
-  ls -lah
-  ls -lah target
+on:
+  push:
+    branches: ["main"]
 
-  JAR="$(ls -t target/*.jar | head -n 1)"
-  echo "Using $JAR"
-  cp "$JAR" app.jar
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-  sudo -n systemctl daemon-reload
-  sudo -n systemctl restart myapp
-  sudo -n systemctl status myapp --no-pager
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "17"
+
+    - name: Build with Maven
+      run: mvn -B -DskipTests package
+
+    - name: Prepare SSH key
+      run: |
+        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > "$GITHUB_WORKSPACE/deploy_key"
+        chmod 600 "$GITHUB_WORKSPACE/deploy_key"
+
+    - name: Copy JAR to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key_path: /github/workspace/deploy_key
+        source: "target/*.jar"
+        target: "/opt/myapp"
+
+    - name: Activate JAR and restart service
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key_path: /github/workspace/deploy_key
+        script: |
+          set -euo pipefail
+          cd /opt/myapp
+
+          echo "Listing /opt/myapp:"
+          ls -lah
+
+          echo "Listing /opt/myapp/target:"
+          ls -lah target
+
+          JAR="$(ls -t target/*.jar | head -n 1)"
+          echo "Using $JAR"
+          cp "$JAR" app.jar
+
+          sudo -n systemctl daemon-reload
+          sudo -n systemctl restart myapp
+          sudo -n systemctl status myapp --no-pager
+
+    - name: Cleanup SSH key
+      if: always()
+      run: rm -f "$GITHUB_WORKSPACE/deploy_key"
