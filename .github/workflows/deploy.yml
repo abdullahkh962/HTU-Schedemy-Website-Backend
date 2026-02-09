@@ -23,15 +23,15 @@ jobs:
 
     - name: Prepare SSH key (from base64 secret)
       run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/deploy_key
-        chmod 600 /tmp/deploy_key
+        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/github_actions_deploy.key
+        chmod 600 /tmp/github_actions_deploy.key
 
     - name: Copy jar to EC2 (/opt/myapp)
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key_path: /tmp/deploy_key
+        key_path: /tmp/github_actions_deploy.key
         source: "target/*.jar"
         target: "/opt/myapp"
 
@@ -40,7 +40,7 @@ jobs:
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key_path: /tmp/deploy_key
+        key_path: /tmp/github_actions_deploy.key
         script: |
           set -euo pipefail
           cd /opt/myapp
