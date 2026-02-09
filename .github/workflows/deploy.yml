@@ -21,17 +21,18 @@ jobs:
     - name: Build (Maven)
       run: mvn -B -DskipTests package
 
+    # Write key into the workspace (mounted into Docker actions)
     - name: Prepare SSH key (from base64 secret)
       run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/github_actions_deploy.key
-        chmod 600 /tmp/github_actions_deploy.key
+        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > "${GITHUB_WORKSPACE}/deploy_key"
+        chmod 600 "${GITHUB_WORKSPACE}/deploy_key"
 
     - name: Copy jar to EC2 (/opt/myapp)
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key_path: /tmp/github_actions_deploy.key
+        key_path: deploy_key
         source: "target/*.jar"
         target: "/opt/myapp"
 
@@ -40,12 +41,10 @@ jobs:
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
-        key_path: /tmp/github_actions_deploy.key
+        key_path: deploy_key
         script: |
           set -euo pipefail
           cd /opt/myapp
-
-          echo "Files in /opt/myapp:"
           ls -lah
 
           JAR="$(ls -t *.jar | head -n 1)"
